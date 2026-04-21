@@ -20,6 +20,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function isNextRedirectError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+        return false;
+    }
+
+    const maybeRedirectError = error as { message?: string; digest?: string };
+    return (
+        maybeRedirectError.message?.includes('NEXT_REDIRECT') === true ||
+        maybeRedirectError.digest?.includes('NEXT_REDIRECT') === true
+    );
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [lastSignInMethod, setLastSignInMethod] = useState<SignInMethod | null>(null);
     const [signingInMethod, setSigningInMethod] = useState<SignInMethod | null>(null);
@@ -42,6 +54,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await localforage.setItem(LAST_SIGN_IN_METHOD_KEY, method);
             await login(method);
         } catch (error) {
+            if (isNextRedirectError(error)) {
+                return;
+            }
             console.error('Error signing in with method:', method, error);
             throw error;
         } finally {

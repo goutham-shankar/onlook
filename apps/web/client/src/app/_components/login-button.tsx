@@ -7,6 +7,18 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useAuthContext } from '../auth/auth-context';
 
+function isNextRedirectError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+        return false;
+    }
+
+    const maybeRedirectError = error as { message?: string; digest?: string };
+    return (
+        maybeRedirectError.message?.includes('NEXT_REDIRECT') === true ||
+        maybeRedirectError.digest?.includes('NEXT_REDIRECT') === true
+    );
+}
+
 interface LoginButtonProps {
     className?: string;
     returnUrl?: string | null;
@@ -33,6 +45,9 @@ export const LoginButton = ({
         try {
             await handleLogin(method, returnUrl ?? null);
         } catch (error) {
+            if (isNextRedirectError(error)) {
+                return;
+            }
             console.error(`Error signing in with ${providerName}:`, error);
             toast.error(`Error signing in with ${providerName}`, {
                 description: error instanceof Error ? error.message : 'Please try again.',

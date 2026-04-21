@@ -20,7 +20,10 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
     const { data: user } = api.user.get.useQuery();
     const pathname = usePathname();
     const posthogKey = env.NEXT_PUBLIC_POSTHOG_KEY;
-    const posthogEnabled = process.env.NODE_ENV === "production" && !!posthogKey;
+    const posthogEnabled =
+        process.env.NODE_ENV === "production" &&
+        !!posthogKey &&
+        !posthogKey.includes("<");
     const gleapKey = env.NEXT_PUBLIC_GLEAP_API_KEY;
     const gleapEnabled =
         process.env.NODE_ENV === "production" &&
