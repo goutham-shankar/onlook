@@ -19,17 +19,19 @@ let gleapSingleton: any | null = null;
 export function TelemetryProvider({ children }: { children: React.ReactNode }) {
     const { data: user } = api.user.get.useQuery();
     const pathname = usePathname();
-    const posthogEnabled = process.env.NODE_ENV === "production" && !!env.NEXT_PUBLIC_POSTHOG_KEY;
+    const posthogKey = env.NEXT_PUBLIC_POSTHOG_KEY;
+    const posthogEnabled = process.env.NODE_ENV === "production" && !!posthogKey;
+    const gleapKey = env.NEXT_PUBLIC_GLEAP_API_KEY;
     const gleapEnabled =
         process.env.NODE_ENV === "production" &&
-        !!env.NEXT_PUBLIC_GLEAP_API_KEY &&
-        !env.NEXT_PUBLIC_GLEAP_API_KEY.includes("<");
+        !!gleapKey &&
+        !gleapKey.includes("<");
 
     // Initialize SDKs once
     useEffect(() => {
         if (posthogEnabled) {
             try {
-                posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
+                posthog.init(posthogKey, {
                     api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
                     capture_pageview: "history_change",
                     capture_pageleave: true,
@@ -46,7 +48,7 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
                     // Dynamic import to avoid hard dependency when not installed
                     const mod = await import("gleap");
                     gleapSingleton = mod.default ?? mod;
-                    gleapSingleton.initialize(env.NEXT_PUBLIC_GLEAP_API_KEY);
+                    gleapSingleton.initialize(gleapKey);
                 } catch (e) {
                     console.warn("Gleap init failed (is dependency installed?)", e);
                 }
