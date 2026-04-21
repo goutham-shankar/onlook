@@ -10,7 +10,8 @@ import { redirect } from 'next/navigation';
 
 export async function login(provider: SignInMethod.GITHUB | SignInMethod.GOOGLE) {
     const supabase = await createClient();
-    const origin = env.NEXT_PUBLIC_SITE_URL || (await headers()).get('origin');
+    const requestOrigin = (await headers()).get('origin');
+    const origin = requestOrigin || env.NEXT_PUBLIC_SITE_URL;
     const redirectTo = `${origin}${Routes.AUTH_CALLBACK}`;
 
     // If already session, redirect

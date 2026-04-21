@@ -1,3 +1,4 @@
+import { env } from '@/env';
 import { Routes } from '@/utils/constants';
 import { createClient } from '@/utils/supabase/server';
 import { type Metadata } from 'next';
@@ -13,7 +14,7 @@ export default async function Layout({ children }: Readonly<{ children: React.Re
     const {
         data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
+    if (!user && !env.ONLOOK_DISABLE_AUTH) {
         redirect(Routes.LOGIN);
     }
     return <>{children}</>;

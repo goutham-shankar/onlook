@@ -5,12 +5,17 @@ import { checkUserSubscriptionAccess } from "@/utils/subscription";
 import { redirect } from "next/navigation";
 
 export default async function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
+    const shouldBypassAuthGate = env.ONLOOK_DISABLE_AUTH;
     const supabase = await createClient();
     const {
         data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
+    if (!user && !shouldBypassAuthGate) {
         redirect(Routes.LOGIN);
+    }
+
+    if (!user && shouldBypassAuthGate) {
+        return <>{children}</>;
     }
 
     // Check if user has an active subscription

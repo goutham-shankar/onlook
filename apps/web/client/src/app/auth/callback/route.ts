@@ -7,7 +7,7 @@ import { api } from '~/trpc/server';
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url);
-    const publicOrigin = env.NEXT_PUBLIC_SITE_URL || origin;
+    const publicOrigin = origin || env.NEXT_PUBLIC_SITE_URL;
     const code = searchParams.get('code');
     const supabase = await createClient();
 
