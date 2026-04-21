@@ -64,10 +64,30 @@ export class FramesManager {
         return this._frameIdToData.get(id) ?? null;
     }
 
+    private ensureSafeViewMethods(view: IFrameView): IFrameView {
+        const safeView = view as unknown as Record<string, unknown>;
+
+        if (typeof safeView.getElementAtLoc !== 'function') {
+            safeView.getElementAtLoc = async () => null;
+        }
+        if (typeof safeView.getElementByDomId !== 'function') {
+            safeView.getElementByDomId = async () => null;
+        }
+        if (typeof safeView.getTheme !== 'function') {
+            safeView.getTheme = async () => null;
+        }
+        if (typeof safeView.setTheme !== 'function') {
+            safeView.setTheme = async () => false;
+        }
+
+        return view;
+    }
+
     registerView(frame: Frame, view: IFrameView) {
+        const safeView = this.ensureSafeViewMethods(view);
         const isSelected = this.isSelected(frame.id);
-        this._frameIdToData.set(frame.id, { frame, view, selected: isSelected });
-        const framePathname = new URL(view.src).pathname;
+        this._frameIdToData.set(frame.id, { frame, view: safeView, selected: isSelected });
+        const framePathname = new URL(safeView.src).pathname;
         this._navigation.registerFrame(frame.id, framePathname);
     }
 

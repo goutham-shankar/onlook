@@ -127,7 +127,8 @@ export async function applyCodeChange(
             if (result) return result;
         } catch (error) {
             console.warn(`Code application failed with provider ${provider}:`, error);
-            throw error;
+            // Try the next provider before failing the request.
+            continue;
         }
     }
 

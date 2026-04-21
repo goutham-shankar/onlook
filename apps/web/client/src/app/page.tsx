@@ -4,6 +4,8 @@ import { CreateManagerProvider } from '@/components/store/create';
 import { SubscriptionModal } from '@/components/ui/pricing-modal';
 import { NonProjectSettingsModal } from '@/components/ui/settings-modal/non-project';
 import { ExternalRoutes } from '@/utils/constants';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { AuthModal } from './_components/auth-modal';
 import { Hero } from './_components/hero';
 import { ContributorSection } from './_components/landing-page/contributor-section';
@@ -15,6 +17,18 @@ import { WhatCanOnlookDoSection } from './_components/landing-page/what-can-onlo
 import { WebsiteLayout } from './_components/website-layout';
 
 export default function Main() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const code = searchParams.get('code');
+        if (!code) {
+            return;
+        }
+        const query = searchParams.toString();
+        router.replace(`/auth/callback${query ? `?${query}` : ''}`);
+    }, [router, searchParams]);
+
     return (
         <CreateManagerProvider>
             <WebsiteLayout showFooter={true}>

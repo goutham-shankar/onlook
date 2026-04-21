@@ -19,10 +19,15 @@ let gleapSingleton: any | null = null;
 export function TelemetryProvider({ children }: { children: React.ReactNode }) {
     const { data: user } = api.user.get.useQuery();
     const pathname = usePathname();
+    const posthogEnabled = process.env.NODE_ENV === "production" && !!env.NEXT_PUBLIC_POSTHOG_KEY;
+    const gleapEnabled =
+        process.env.NODE_ENV === "production" &&
+        !!env.NEXT_PUBLIC_GLEAP_API_KEY &&
+        !env.NEXT_PUBLIC_GLEAP_API_KEY.includes("<");
 
     // Initialize SDKs once
     useEffect(() => {
-        if (env.NEXT_PUBLIC_POSTHOG_KEY) {
+        if (posthogEnabled) {
             try {
                 posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
                     api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
@@ -33,11 +38,9 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
             } catch (e) {
                 console.warn("PostHog init failed", e);
             }
-        } else {
-            console.warn("PostHog key is not set, skipping initialization");
         }
 
-        if (env.NEXT_PUBLIC_GLEAP_API_KEY) {
+        if (gleapEnabled) {
             (async () => {
                 try {
                     // Dynamic import to avoid hard dependency when not installed
@@ -49,10 +52,11 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
                 }
             })();
         }
-    }, []);
+    }, [gleapEnabled]);
 
     // Identify or clear identity on user changes
     useEffect(() => {
+        if (!posthogEnabled) return;
         try {
             if (user) {
                 const fullName = user.displayName || [user.firstName, user.lastName].filter(Boolean).join(" ");
@@ -82,7 +86,7 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
             console.error("PostHog identify/reset error:", e);
         }
 
-        if (!env.NEXT_PUBLIC_GLEAP_API_KEY) return;
+        if (!gleapEnabled) return;
         (async () => {
             try {
                 const Gleap = gleapSingleton ?? (await import("gleap")).default;
@@ -107,11 +111,11 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
                 // console.warn("Gleap identify/clear failed:", e);
             }
         })();
-    }, [user]);
+    }, [user, posthogEnabled, gleapEnabled]);
 
     // Soft re-initialize Gleap on path changes to guard against soft reloads/HMR
     useEffect(() => {
-        if (!env.NEXT_PUBLIC_GLEAP_API_KEY) return;
+        if (!gleapEnabled) return;
         (async () => {
             try {
                 const Gleap = gleapSingleton ?? (await import("gleap")).default;
@@ -122,7 +126,7 @@ export function TelemetryProvider({ children }: { children: React.ReactNode }) {
                 // ignore
             }
         })();
-    }, [pathname]);
+    }, [pathname, gleapEnabled]);
 
     return <PHProvider client={posthog}>{children}</PHProvider>;
 }

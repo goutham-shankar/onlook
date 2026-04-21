@@ -8,15 +8,25 @@ import { type FrameData } from '@/components/store/editor/frames';
 
 export function ThemeGroup({ frameData }: { frameData: FrameData }) {
     const [theme, setTheme] = useState<SystemTheme>(SystemTheme.SYSTEM);
+
+    const isValidTheme = (value: unknown): value is SystemTheme => {
+        return (
+            value === SystemTheme.SYSTEM ||
+            value === SystemTheme.DARK ||
+            value === SystemTheme.LIGHT
+        );
+    };
+
     useEffect(() => {
         const getTheme = async () => {
-            if (!frameData?.view) {
-                console.error('No frame view found');
+            if (!frameData?.view || typeof frameData.view.getTheme !== 'function') {
                 return;
             }
 
-            const theme = await frameData.view.getTheme();
-            setTheme(theme);
+            const nextTheme = await frameData.view.getTheme();
+            if (isValidTheme(nextTheme)) {
+                setTheme(nextTheme);
+            }
         }
         void getTheme();
     }, [frameData]);
@@ -24,7 +34,13 @@ export function ThemeGroup({ frameData }: { frameData: FrameData }) {
     async function changeTheme(newTheme: SystemTheme) {
         const previousTheme = theme;
         setTheme(newTheme);
-        const success = await frameData.view?.setTheme(newTheme);
+        if (!frameData?.view || typeof frameData.view.setTheme !== 'function') {
+            toast.error('Frame is not ready yet');
+            setTheme(previousTheme);
+            return;
+        }
+
+        const success = await frameData.view.setTheme(newTheme);
         if (!success) {
             toast.error('Failed to change theme');
             setTheme(previousTheme);

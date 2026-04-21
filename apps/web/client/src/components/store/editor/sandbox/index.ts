@@ -4,7 +4,7 @@ import { EXCLUDED_SYNC_PATHS } from '@onlook/constants';
 import type { CodeFileSystem } from '@onlook/file-system';
 import { type FileEntry } from '@onlook/file-system';
 import type { Branch, RouterConfig } from '@onlook/models';
-import { makeAutoObservable, reaction } from 'mobx';
+import { makeAutoObservable, reaction, runInAction } from 'mobx';
 import type { EditorEngine } from '../engine';
 import type { ErrorManager } from '../error';
 import { GitManager } from '../git';
@@ -95,7 +95,9 @@ export class SandboxManager {
                 return;
             }
 
-            this.preloadScriptState = PreloadScriptState.LOADING
+            runInAction(() => {
+                this.preloadScriptState = PreloadScriptState.LOADING;
+            });
 
             if (!this.session.provider) {
                 throw new Error('No provider available for preload script injection');
@@ -107,12 +109,16 @@ export class SandboxManager {
             }
 
             await copyPreloadScriptToPublic(this.session.provider, routerConfig);
-            this.preloadScriptState = PreloadScriptState.INJECTED
+            runInAction(() => {
+                this.preloadScriptState = PreloadScriptState.INJECTED;
+            });
         } catch (error) {
             console.error('[SandboxManager] Failed to ensure preload script exists:', error);
             // Mark as injected to prevent blocking frames indefinitely
             // Frames will handle the missing preload script gracefully
-            this.preloadScriptState = PreloadScriptState.NOT_INJECTED
+            runInAction(() => {
+                this.preloadScriptState = PreloadScriptState.NOT_INJECTED;
+            });
         }
     }
 
@@ -218,7 +224,9 @@ export class SandboxManager {
         this.providerReactionDisposer = undefined;
         this.sync?.release();
         this.sync = null;
-        this.preloadScriptState = PreloadScriptState.NOT_INJECTED
+        runInAction(() => {
+            this.preloadScriptState = PreloadScriptState.NOT_INJECTED;
+        });
         this.session.clear();
     }
 }

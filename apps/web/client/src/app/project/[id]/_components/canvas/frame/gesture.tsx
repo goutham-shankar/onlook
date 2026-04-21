@@ -32,20 +32,25 @@ export const GestureScreen = observer(({ frame, isResizing }: { frame: Frame, is
         async (e: React.MouseEvent<HTMLDivElement>, action: MouseAction) => {
             try {
                 const frameData = getFrameData();
-                if (!frameData?.view) {
-                    throw new Error('Frame view not found');
+                const view = frameData?.view as
+                    | ({ getElementAtLoc?: (x: number, y: number, withStyles?: boolean) => Promise<DomElement | null> })
+                    | undefined;
+                const getElementAtLoc = view?.getElementAtLoc;
+                if (typeof getElementAtLoc !== 'function') {
+                    return;
                 }
                 const pos = getRelativeMousePosition(e);
                 const shouldGetStyle = [MouseAction.MOUSE_DOWN, MouseAction.DOUBLE_CLICK].includes(
                     action,
                 );
-                const el: DomElement = await frameData.view.getElementAtLoc(
+                const el: DomElement | null = await getElementAtLoc.call(
+                    view,
                     pos.x,
                     pos.y,
                     shouldGetStyle,
                 );
                 if (!el) {
-                    throw new Error('No element found');
+                    return;
                 }
 
                 switch (action) {
@@ -87,6 +92,13 @@ export const GestureScreen = observer(({ frame, isResizing }: { frame: Frame, is
                         break;
                 }
             } catch (error) {
+                const errorMessage = String(error);
+                if (errorMessage.includes('getElementAtLoc') && errorMessage.includes('not a function')) {
+                    return;
+                }
+                if (errorMessage.includes('Frame view not found') || errorMessage.includes('No element found')) {
+                    return;
+                }
                 console.error('Error handling mouse event:', error);
                 return;
             }
@@ -150,7 +162,7 @@ export const GestureScreen = observer(({ frame, isResizing }: { frame: Frame, is
 
     async function handleMouseUp(e: React.MouseEvent<HTMLDivElement>) {
         const frameData = getFrameData();
-        if (!frameData) {
+        if (!frameData?.view) {
             return;
         }
 

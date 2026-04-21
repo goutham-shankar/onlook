@@ -2,7 +2,7 @@
 
 import type { Frame, LayerNode } from '@onlook/models';
 import { debounce } from 'lodash';
-import { makeAutoObservable, reaction } from 'mobx';
+import { makeAutoObservable, reaction, runInAction } from 'mobx';
 import type { EditorEngine } from '../engine';
 
 export class FrameEventManager {
@@ -61,18 +61,24 @@ export class FrameEventManager {
 
     private undebouncedViewportCheck = () => {
         if (typeof window === 'undefined') {
-            this.isCanvasOutOfView = false;
+            runInAction(() => {
+                this.isCanvasOutOfView = false;
+            });
             return;
         }
 
         const frames = this.editorEngine.frames.getAll();
         if (frames.length === 0) {
-            this.isCanvasOutOfView = false;
+            runInAction(() => {
+                this.isCanvasOutOfView = false;
+            });
             return;
         }
 
         const isAnyFrameInView = frames.some((frame) => this.isFrameInViewport(frame.frame));
-        this.isCanvasOutOfView = !isAnyFrameInView;
+        runInAction(() => {
+            this.isCanvasOutOfView = !isAnyFrameInView;
+        });
     };
 
     handleViewportCheck = debounce(this.undebouncedViewportCheck, 500, {
@@ -134,7 +140,6 @@ export class FrameEventManager {
             selectedElements.map(async (el) => {
                 const frameData = this.editorEngine.frames.get(el.frameId);
                 if (!frameData?.view) {
-                    console.error('No frame view found');
                     return null;
                 }
                 try {

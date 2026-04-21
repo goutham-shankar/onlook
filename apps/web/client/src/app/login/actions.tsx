@@ -10,14 +10,14 @@ import { redirect } from 'next/navigation';
 
 export async function login(provider: SignInMethod.GITHUB | SignInMethod.GOOGLE) {
     const supabase = await createClient();
-    const origin = (await headers()).get('origin') ?? env.NEXT_PUBLIC_SITE_URL;
+    const origin = env.NEXT_PUBLIC_SITE_URL || (await headers()).get('origin');
     const redirectTo = `${origin}${Routes.AUTH_CALLBACK}`;
 
     // If already session, redirect
     const {
-        data: { session },
-    } = await supabase.auth.getSession();
-    if (session) {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
         redirect(Routes.AUTH_REDIRECT);
     }
 
@@ -43,9 +43,9 @@ export async function devLogin() {
     }
 
     const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (session) {
+    if (user) {
         redirect(Routes.AUTH_REDIRECT);
     }
 

@@ -15,9 +15,9 @@ export const metadata: Metadata = {
 export default async function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
     const supabase = await createClient();
     const {
-        data: { session },
-    } = await supabase.auth.getSession();
-    if (!session) {
+        data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
         const headersList = await headers();
         const pathname = headersList.get('x-pathname') || Routes.PROJECTS;
         redirect(`${Routes.LOGIN}?${getReturnUrlQueryParam(pathname)}`);
@@ -25,12 +25,15 @@ export default async function Layout({ children }: Readonly<{ children: React.Re
 
     // Check if user has an active subscription
     const { hasActiveSubscription, hasLegacySubscription } = await checkUserSubscriptionAccess(
-        session.user.id,
-        session.user.email,
+        user.id,
+        user.email,
     );
 
+    // Local self-hosting: allow access in development without a paid subscription.
+    const shouldBypassSubscriptionGate = env.NODE_ENV === 'development';
+
     // If no subscription, redirect to demo page
-    if (!hasActiveSubscription && !hasLegacySubscription) {
+    if (!shouldBypassSubscriptionGate && !hasActiveSubscription && !hasLegacySubscription) {
         redirect(Routes.DEMO_ONLY);
     }
 

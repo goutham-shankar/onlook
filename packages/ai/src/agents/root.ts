@@ -3,6 +3,8 @@ import { ChatType, LLMProvider, OPENROUTER_MODELS, type ChatMessage, type ModelC
 import { NoSuchToolError, generateObject, smoothStream, stepCountIs, streamText, type ToolSet } from 'ai';
 import { convertToStreamMessages, getAskModeSystemPrompt, getCreatePageSystemPrompt, getSystemPrompt, getToolSetFromType, initModel } from '../index';
 
+const MAX_CHAT_OUTPUT_TOKENS = 8192;
+
 export const createRootAgentStream = ({
     chatType,
     conversationId,
@@ -25,6 +27,7 @@ export const createRootAgentStream = ({
         providerOptions: modelConfig.providerOptions,
         messages: convertToStreamMessages(messages),
         model: modelConfig.model,
+        maxOutputTokens: Math.min(modelConfig.maxOutputTokens, MAX_CHAT_OUTPUT_TOKENS),
         system: systemPrompt,
         tools: toolSet,
         headers: modelConfig.headers,
@@ -71,7 +74,7 @@ const getModelFromType = (chatType: ChatType): ModelConfig => {
         default:
             return initModel({
                 provider: LLMProvider.OPENROUTER,
-                model: OPENROUTER_MODELS.CLAUDE_4_5_SONNET,
+                model: OPENROUTER_MODELS.OPEN_AI_GPT_5_MINI,
             });
     }
 }

@@ -9,24 +9,7 @@ export const checkMessageLimit = async (req: NextRequest): Promise<{
 }> => {
     const { api } = await createTRPCClient(req);
     const usage = await api.usage.get();
-
-    const dailyUsage = usage.daily;
-    const dailyExceeded = dailyUsage.usageCount >= dailyUsage.limitCount;
-    if (dailyExceeded) {
-        return {
-            exceeded: true,
-            usage: dailyUsage,
-        };
-    }
-
     const monthlyUsage = usage.monthly;
-    const monthlyExceeded = monthlyUsage.usageCount >= monthlyUsage.limitCount;
-    if (monthlyExceeded) {
-        return {
-            exceeded: true,
-            usage: monthlyUsage,
-        };
-    }
 
     return {
         exceeded: false,

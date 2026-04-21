@@ -6,6 +6,9 @@ class PostHogSingleton {
     private constructor() { }
 
     public static getInstance(): PostHog | null {
+        if (env.NODE_ENV !== 'production') {
+            return null;
+        }
         if (!env.NEXT_PUBLIC_POSTHOG_KEY) {
             console.warn('PostHog key not found');
             return null;

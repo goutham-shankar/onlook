@@ -35,7 +35,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
         error,
     } = await supabase.auth.getUser();
 
-    if (error) {
+    if (error && error.message !== 'Auth session missing!') {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: error.message });
     }
 

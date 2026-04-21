@@ -11,6 +11,34 @@ import { shortenUuid } from '@onlook/utility/src/id';
 
 import { createTRPCRouter, protectedProcedure } from '../../trpc';
 
+function hasValidCodeSandboxKey() {
+    const key = process.env.CSB_API_KEY;
+    return Boolean(key && !key.includes('<') && !key.includes('Your api key'));
+}
+
+async function waitForPreviewReady(previewUrl: string) {
+    const MAX_ATTEMPTS = 10;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            const response = await fetch(previewUrl, {
+                method: 'GET',
+                redirect: 'follow',
+            });
+
+            if (response.ok) {
+                return;
+            }
+        } catch {
+            // Ignore transient network errors while sandbox is booting.
+        }
+
+        if (attempt < MAX_ATTEMPTS) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+    }
+}
+
 function getProvider({
     sandboxId,
     userId,
@@ -46,6 +74,13 @@ export const sandboxRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ input, ctx }) => {
+            if (!hasValidCodeSandboxKey()) {
+                throw new TRPCError({
+                    code: 'PRECONDITION_FAILED',
+                    message: 'CSB_API_KEY is missing or still using a placeholder value in .env.local',
+                });
+            }
+
             // Create a new sandbox using the static provider
             const CodesandboxProvider = await getStaticCodeProvider(CodeProvider.CodeSandbox);
 
@@ -60,9 +95,12 @@ export const sandboxRouter = createTRPCRouter({
                 tags: ['onlook-test'],
             });
 
+            const previewUrl = getSandboxPreviewUrl(newSandbox.id, template.port);
+            await waitForPreviewReady(previewUrl);
+
             return {
                 sandboxId: newSandbox.id,
-                previewUrl: getSandboxPreviewUrl(newSandbox.id, template.port),
+                previewUrl,
             };
         }),
 
@@ -125,6 +163,13 @@ export const sandboxRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ input }) => {
+            if (!hasValidCodeSandboxKey()) {
+                throw new TRPCError({
+                    code: 'PRECONDITION_FAILED',
+                    message: 'CSB_API_KEY is missing or still using a placeholder value in .env.local',
+                });
+            }
+
             const MAX_RETRY_ATTEMPTS = 3;
             let lastError: Error | null = null;
 
@@ -143,6 +188,7 @@ export const sandboxRouter = createTRPCRouter({
                     });
 
                     const previewUrl = getSandboxPreviewUrl(sandbox.id, input.sandbox.port);
+                    await waitForPreviewReady(previewUrl);
 
                     return {
                         sandboxId: sandbox.id,
@@ -187,6 +233,13 @@ export const sandboxRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ input }) => {
+            if (!hasValidCodeSandboxKey()) {
+                throw new TRPCError({
+                    code: 'PRECONDITION_FAILED',
+                    message: 'CSB_API_KEY is missing or still using a placeholder value in .env.local',
+                });
+            }
+
             const MAX_RETRY_ATTEMPTS = 3;
             const DEFAULT_PORT = 3000;
             let lastError: Error | null = null;
@@ -202,6 +255,7 @@ export const sandboxRouter = createTRPCRouter({
                     });
 
                     const previewUrl = getSandboxPreviewUrl(sandbox.id, DEFAULT_PORT);
+                    await waitForPreviewReady(previewUrl);
 
                     return {
                         sandboxId: sandbox.id,
