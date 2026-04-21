@@ -1,6 +1,7 @@
 'use client';
 
 import { LocalForageKeys, Routes } from '@/utils/constants';
+import { env } from '@/env';
 import { sanitizeReturnUrl } from '@/utils/url';
 import localforage from 'localforage';
 import { useRouter } from 'next/navigation';
@@ -9,7 +10,8 @@ import { api } from '@/trpc/react';
 
 export default function AuthRedirect() {
     const router = useRouter();
-    const shouldBypassSubscriptionGate = process.env.NODE_ENV === 'development';
+    const shouldBypassSubscriptionGate =
+        process.env.NODE_ENV === 'development' || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH;
     const { data: subscription, isLoading: subscriptionLoading } = api.subscription.get.useQuery();
     const { data: legacySubscription, isLoading: legacyLoading } = api.subscription.getLegacySubscriptions.useQuery();
 

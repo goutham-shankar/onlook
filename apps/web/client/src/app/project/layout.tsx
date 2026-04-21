@@ -20,7 +20,7 @@ export default async function Layout({ children }: Readonly<{ children: React.Re
     );
 
     // Local self-hosting: allow access in development without a paid subscription.
-    const shouldBypassSubscriptionGate = env.NODE_ENV === 'development';
+    const shouldBypassSubscriptionGate = env.NODE_ENV === 'development' || env.ONLOOK_DISABLE_AUTH;
 
     // If no subscription, redirect to demo page
     if (!shouldBypassSubscriptionGate && !hasActiveSubscription && !hasLegacySubscription) {
