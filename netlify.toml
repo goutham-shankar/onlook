@@ -1,0 +1,7 @@
+[build]
+  command = "bun run build"
+  publish = "apps/web/client/.next"
+  base = "apps/web/client"
+
+[build.environment]
+  GIT_SUBMODULES = "false"
