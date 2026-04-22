@@ -51,7 +51,7 @@ export const UserDeleteSection = observer(() => {
         // Sign out
         const supabase = createClient();
         await supabase.auth.signOut();
-        router.push(Routes.LOGIN);
+        router.push(Routes.PROJECTS);
     };
 
     const canProceedWithDelete = deleteEmail === user?.email && deleteConfirmText === 'DELETE';

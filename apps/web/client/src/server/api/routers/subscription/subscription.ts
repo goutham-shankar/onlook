@@ -4,11 +4,14 @@ import { createBillingPortalSession, createCheckoutSession, createCustomer, isTi
 import { and, eq, isNull } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure } from '../../trpc';
+import { createTRPCRouter, protectedProcedure, publicProcedure } from '../../trpc';
 
 export const subscriptionRouter = createTRPCRouter({
-    getLegacySubscriptions: protectedProcedure.query(async ({ ctx }) => {
+    getLegacySubscriptions: publicProcedure.query(async ({ ctx }) => {
         const user = ctx.user;
+        if (!user?.email) {
+            return null;
+        }
         const subscription = await ctx.db.query.legacySubscriptions.findFirst({
             where: and(
                 eq(legacySubscriptions.email, user.email),
@@ -17,8 +20,11 @@ export const subscriptionRouter = createTRPCRouter({
         });
         return subscription ?? null;
     }),
-    get: protectedProcedure.query(async ({ ctx }) => {
+    get: publicProcedure.query(async ({ ctx }) => {
         const user = ctx.user;
+        if (!user?.id) {
+            return null;
+        }
         const subscription = await ctx.db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.userId, user.id),

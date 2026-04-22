@@ -23,7 +23,7 @@ export const AuthRedirect = ({ children }: { children: React.ReactNode }) => {
             if (!user) {
                 const pathname = window.location.pathname;
                 await localforage.setItem(LocalForageKeys.RETURN_URL, pathname);
-                router.push(Routes.LOGIN);
+                router.push(Routes.PROJECTS);
             }
         };
         ensureUser();

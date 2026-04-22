@@ -5,7 +5,6 @@ import { api } from '@/trpc/react';
 import { Routes } from '@/utils/constants';
 import { createClient } from '@/utils/supabase/client';
 import { openFeedbackWidget, resetTelemetry } from '@/utils/telemetry';
-import { getReturnUrlQueryParam } from '@/utils/url';
 import { Avatar, AvatarFallback, AvatarImage } from '@onlook/ui/avatar';
 import {
     DropdownMenu,
@@ -16,7 +15,7 @@ import {
 } from '@onlook/ui/dropdown-menu';
 import { Icons } from '@onlook/ui/icons';
 import { getInitials } from '@onlook/utility';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { UsageSection } from './plans';
 import { SettingsTabValue } from '../settings-modal/helpers';
@@ -25,8 +24,6 @@ export const CurrentUserAvatar = ({ className }: { className?: string }) => {
     const stateManager = useStateManager();
     const supabase = createClient();
     const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     const { data: user } = api.user.get.useQuery();
     const initials = getInitials(user?.displayName ?? user?.firstName ?? '');
@@ -36,8 +33,7 @@ export const CurrentUserAvatar = ({ className }: { className?: string }) => {
         // Clear analytics/feedback identities before signing out
         void resetTelemetry();
         await supabase.auth.signOut();
-        const returnUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
-        router.push(`${Routes.LOGIN}?${getReturnUrlQueryParam(returnUrl)}`);
+        router.push(Routes.PROJECTS);
     };
 
     const handleOpenSubscription = () => {
