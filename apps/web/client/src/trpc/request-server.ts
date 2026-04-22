@@ -27,27 +27,31 @@ export const createTRPCContext = async (req: NextRequest, opts: { headers: Heade
     const effectiveUser = user ?? (isAuthBypassed ? DEMO_USER : null);
 
     if (isAuthBypassed && effectiveUser) {
-        await db
-            .insert(authUsers)
-            .values({
-                id: effectiveUser.id,
-                email: effectiveUser.email ?? '',
-                emailConfirmedAt: effectiveUser.email_confirmed_at ? new Date(effectiveUser.email_confirmed_at) : null,
-                rawUserMetaData: effectiveUser.user_metadata,
-            })
-            .onConflictDoNothing();
+        try {
+            await db
+                .insert(authUsers)
+                .values({
+                    id: effectiveUser.id,
+                    email: effectiveUser.email ?? '',
+                    emailConfirmedAt: effectiveUser.email_confirmed_at ? new Date(effectiveUser.email_confirmed_at) : null,
+                    rawUserMetaData: effectiveUser.user_metadata,
+                })
+                .onConflictDoNothing();
 
-        await db
-            .insert(users)
-            .values({
-                id: effectiveUser.id,
-                email: effectiveUser.email ?? null,
-                firstName: (effectiveUser.user_metadata.first_name as string | undefined) ?? null,
-                lastName: (effectiveUser.user_metadata.last_name as string | undefined) ?? null,
-                displayName: (effectiveUser.user_metadata.display_name as string | undefined) ?? (effectiveUser.user_metadata.name as string | undefined) ?? null,
-                avatarUrl: (effectiveUser.user_metadata.avatar_url as string | undefined) ?? (effectiveUser.user_metadata.avatarUrl as string | undefined) ?? null,
-            })
-            .onConflictDoNothing();
+            await db
+                .insert(users)
+                .values({
+                    id: effectiveUser.id,
+                    email: effectiveUser.email ?? null,
+                    firstName: (effectiveUser.user_metadata.first_name as string | undefined) ?? null,
+                    lastName: (effectiveUser.user_metadata.last_name as string | undefined) ?? null,
+                    displayName: (effectiveUser.user_metadata.display_name as string | undefined) ?? (effectiveUser.user_metadata.name as string | undefined) ?? null,
+                    avatarUrl: (effectiveUser.user_metadata.avatar_url as string | undefined) ?? (effectiveUser.user_metadata.avatarUrl as string | undefined) ?? null,
+                })
+                .onConflictDoNothing();
+        } catch (provisionError) {
+            console.warn('Demo user provisioning skipped:', provisionError);
+        }
     }
 
     return {
