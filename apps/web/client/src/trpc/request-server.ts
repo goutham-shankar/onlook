@@ -13,6 +13,7 @@ import { createCaller, type AppRouter } from '~/server/api/root';
 import { createQueryClient } from './query-client';
 
 export const createTRPCContext = async (req: NextRequest, opts: { headers: Headers }) => {
+    const isAuthBypassed = env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH;
     const supabase = await createSupabaseClient(req);
     const {
         data: { user },
@@ -23,9 +24,9 @@ export const createTRPCContext = async (req: NextRequest, opts: { headers: Heade
         throw new TRPCError({ code: 'UNAUTHORIZED', message: error.message });
     }
 
-    const effectiveUser = user ?? (env.ONLOOK_DISABLE_AUTH ? DEMO_USER : null);
+    const effectiveUser = user ?? (isAuthBypassed ? DEMO_USER : null);
 
-    if (env.ONLOOK_DISABLE_AUTH && effectiveUser) {
+    if (isAuthBypassed && effectiveUser) {
         await db
             .insert(authUsers)
             .values({

@@ -7,7 +7,7 @@ import Link from "next/link";
 
 export default async function Layout({ params, children }: Readonly<{ params: Promise<{ id: string }>, children: React.ReactNode }>) {
     const projectId = (await params).id;
-    if (env.ONLOOK_DISABLE_AUTH) {
+    if (env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) {
         return <>{children}</>;
     }
     const hasAccess = await api.project.hasAccess({ projectId });

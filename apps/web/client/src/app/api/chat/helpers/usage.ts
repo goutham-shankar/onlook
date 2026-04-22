@@ -20,9 +20,10 @@ export const checkMessageLimit = async (req: NextRequest): Promise<{
 }
 
 export const getSupabaseUser = async (request: NextRequest) => {
+    const isAuthBypassed = env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH;
     const supabase = await createSupabaseClient(request);
     const { data: { user } } = await supabase.auth.getUser();
-    return user ?? (env.ONLOOK_DISABLE_AUTH ? DEMO_USER : null);
+    return user ?? (isAuthBypassed ? DEMO_USER : null);
 }
 
 export const incrementUsage = async (req: NextRequest, traceId?: string): Promise<{

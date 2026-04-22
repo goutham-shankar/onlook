@@ -12,6 +12,7 @@ import { userSettingsRouter } from './user-settings';
 
 export const userRouter = createTRPCRouter({
     get: publicProcedure.query(async ({ ctx }) => {
+        const isAuthBypassed = env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH;
         if (!ctx.user) {
             return null;
         }
@@ -35,7 +36,7 @@ export const userRouter = createTRPCRouter({
             return userData;
         }
 
-        if (env.ONLOOK_DISABLE_AUTH) {
+        if (isAuthBypassed) {
             return {
                 id: authUser.id,
                 firstName,

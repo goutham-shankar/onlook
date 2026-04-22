@@ -32,6 +32,7 @@ import { ZodError } from 'zod';
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+    const isAuthBypassed = env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH;
     const supabase = await createClient();
     const {
         data: { user },
@@ -42,9 +43,9 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: error.message });
     }
 
-    const effectiveUser = user ?? (env.ONLOOK_DISABLE_AUTH ? DEMO_USER : null);
+    const effectiveUser = user ?? (isAuthBypassed ? DEMO_USER : null);
 
-    if (env.ONLOOK_DISABLE_AUTH && effectiveUser) {
+    if (isAuthBypassed && effectiveUser) {
         await db
             .insert(authUsers)
             .values({
