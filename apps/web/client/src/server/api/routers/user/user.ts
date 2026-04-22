@@ -1,7 +1,7 @@
 import { env } from '@/env';
 import { trackEvent } from '@/utils/analytics/server';
 import { callUserWebhook } from '@/utils/n8n/webhook';
-import { authUsers, fromDbUser, userInsertSchema, users, type User } from '@onlook/db';
+import { SEED_USER, authUsers, fromDbUser, userInsertSchema, users, type User } from '@onlook/db';
 import type { User as AppUser } from '@onlook/models';
 import { extractNames } from '@onlook/utility';
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -14,6 +14,20 @@ export const userRouter = createTRPCRouter({
     get: publicProcedure.query(async ({ ctx }) => {
         const isAuthBypassed = env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH;
         if (!ctx.user) {
+            if (isAuthBypassed) {
+                return {
+                    id: SEED_USER.ID,
+                    firstName: SEED_USER.FIRST_NAME,
+                    lastName: SEED_USER.LAST_NAME,
+                    displayName: SEED_USER.DISPLAY_NAME,
+                    email: SEED_USER.EMAIL,
+                    avatarUrl: SEED_USER.AVATAR_URL,
+                    createdAt: new Date(0),
+                    updatedAt: new Date(0),
+                    stripeCustomerId: null,
+                    githubInstallationId: null,
+                } satisfies AppUser;
+            }
             return null;
         }
 
