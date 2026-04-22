@@ -8,7 +8,7 @@ export const env = createEnv({
      */
     server: {
         NODE_ENV: z.enum(['development', 'test', 'production']),
-        ONLOOK_DISABLE_AUTH: z.coerce.boolean().default(false),
+        ONLOOK_DISABLE_AUTH: z.coerce.boolean().default(true),
         CSB_API_KEY: z.string(),
         SUPABASE_DATABASE_URL: z.url(),
         SUPABASE_SERVICE_ROLE_KEY: z.string(),
@@ -69,7 +69,7 @@ export const env = createEnv({
      */
     client: {
         NEXT_PUBLIC_SITE_URL: z.url().default('http://localhost:3000'),
-        NEXT_PUBLIC_ONLOOK_DISABLE_AUTH: z.coerce.boolean().default(false),
+        NEXT_PUBLIC_ONLOOK_DISABLE_AUTH: z.coerce.boolean().default(true),
         NEXT_PUBLIC_SUPABASE_URL: z.string(),
         NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string(),
         NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),

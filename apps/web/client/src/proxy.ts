@@ -1,7 +1,14 @@
+import { env } from '@/env';
 import { updateSession } from '@/utils/supabase/middleware';
-import { type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
+    if ((env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) && request.nextUrl.pathname === '/login') {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = '/auth/redirect';
+        return NextResponse.redirect(redirectUrl);
+    }
+
     // update user's auth session
     return await updateSession(request);
 }
