@@ -1,6 +1,7 @@
 {
     "extends": "@onlook/typescript/next-react.json",
     "compilerOptions": {
+        "ignoreDeprecations": "6.0",
         "baseUrl": ".",
         "allowArbitraryExtensions": true,
         "paths": {

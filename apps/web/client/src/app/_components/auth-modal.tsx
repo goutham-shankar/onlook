@@ -1,4 +1,5 @@
 import { transKeys } from '@/i18n/keys';
+import { env } from '@/env';
 import {
     AlertDialog,
     AlertDialogContent,
@@ -17,6 +18,10 @@ import { Icons } from '@onlook/ui/icons';
 export function AuthModal() {
     const { setIsAuthModalOpen, isAuthModalOpen } = useAuthContext();
     const t = useTranslations();
+
+    if (env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) {
+        return null;
+    }
 
     return (
         <AlertDialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>

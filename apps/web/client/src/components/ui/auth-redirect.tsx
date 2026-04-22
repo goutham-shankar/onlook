@@ -1,5 +1,6 @@
 'use client';
 
+import { env } from '@/env';
 import { LocalForageKeys, Routes } from '@/utils/constants';
 import { createClient } from '@/utils/supabase/client';
 import localforage from 'localforage';
@@ -12,6 +13,10 @@ export const AuthRedirect = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         const ensureUser = async () => {
+            if (env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) {
+                return;
+            }
+
             const {
                 data: { user },
             } = await supabase.auth.getUser();

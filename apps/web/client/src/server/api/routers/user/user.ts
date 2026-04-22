@@ -1,6 +1,8 @@
+import { env } from '@/env';
 import { trackEvent } from '@/utils/analytics/server';
 import { callUserWebhook } from '@/utils/n8n/webhook';
 import { authUsers, fromDbUser, userInsertSchema, users, type User } from '@onlook/db';
+import type { User as AppUser } from '@onlook/models';
 import { extractNames } from '@onlook/utility';
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { eq } from 'drizzle-orm';
@@ -29,7 +31,26 @@ export const userRouter = createTRPCRouter({
             email,
             avatarUrl: user.avatarUrl ?? authUser.user_metadata.avatarUrl,
         }) : null;
-        return userData;
+        if (userData) {
+            return userData;
+        }
+
+        if (env.ONLOOK_DISABLE_AUTH) {
+            return {
+                id: authUser.id,
+                firstName,
+                lastName,
+                displayName,
+                email,
+                avatarUrl: authUser.user_metadata.avatarUrl ?? null,
+                createdAt: new Date(0),
+                updatedAt: new Date(0),
+                stripeCustomerId: null,
+                githubInstallationId: null,
+            } satisfies AppUser;
+        }
+
+        return null;
     }),
     getById: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
         const user = await ctx.db.query.users.findFirst({

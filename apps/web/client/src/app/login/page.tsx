@@ -5,17 +5,42 @@ import { transKeys } from '@/i18n/keys';
 import { LocalForageKeys, Routes } from '@/utils/constants';
 import { SignInMethod } from '@onlook/models/auth';
 import { Icons } from '@onlook/ui/icons';
+import { env } from '@/env';
+import localforage from 'localforage';
 import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { DevLoginButton, LoginButton } from '../_components/login-button';
 
 export default function LoginPage() {
     const isDev = process.env.NODE_ENV === 'development';
     const t = useTranslations();
     const backgroundUrl = useGetBackground('login');
-    const returnUrl = useSearchParams().get(LocalForageKeys.RETURN_URL);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const returnUrl = searchParams.get(LocalForageKeys.RETURN_URL);
+
+    useEffect(() => {
+        const bypassAuth = async () => {
+            if (!env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) {
+                return;
+            }
+
+            if (returnUrl) {
+                await localforage.setItem(LocalForageKeys.RETURN_URL, returnUrl);
+            }
+
+            router.replace(Routes.AUTH_REDIRECT);
+        };
+
+        void bypassAuth();
+    }, [returnUrl, router]);
+
+    if (env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) {
+        return null;
+    }
 
     return (
         <div className="flex h-screen w-screen justify-center">

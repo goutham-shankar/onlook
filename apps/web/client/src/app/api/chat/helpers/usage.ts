@@ -1,3 +1,5 @@
+import { env } from '@/env';
+import { DEMO_USER } from '@/utils/auth/demo-user';
 import { createClient as createTRPCClient } from '@/trpc/request-server';
 import { createClient as createSupabaseClient } from '@/utils/supabase/request-server';
 import { UsageType, type Usage } from '@onlook/models';
@@ -20,7 +22,7 @@ export const checkMessageLimit = async (req: NextRequest): Promise<{
 export const getSupabaseUser = async (request: NextRequest) => {
     const supabase = await createSupabaseClient(request);
     const { data: { user } } = await supabase.auth.getUser();
-    return user;
+    return user ?? (env.ONLOOK_DISABLE_AUTH ? DEMO_USER : null);
 }
 
 export const incrementUsage = async (req: NextRequest, traceId?: string): Promise<{

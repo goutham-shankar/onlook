@@ -1,3 +1,4 @@
+import { env } from '@/env';
 import { api } from "@/trpc/server";
 import { Routes } from "@/utils/constants";
 import { SUPPORT_EMAIL } from "@onlook/constants";
@@ -6,6 +7,9 @@ import Link from "next/link";
 
 export default async function Layout({ params, children }: Readonly<{ params: Promise<{ id: string }>, children: React.ReactNode }>) {
     const projectId = (await params).id;
+    if (env.ONLOOK_DISABLE_AUTH) {
+        return <>{children}</>;
+    }
     const hasAccess = await api.project.hasAccess({ projectId });
     if (!hasAccess) {
         return <NoAccess />;
