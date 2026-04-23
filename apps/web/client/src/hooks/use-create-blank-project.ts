@@ -1,9 +1,8 @@
 'use client';
 
-import { useAuthContext } from '@/app/auth/auth-context';
 import { api } from '@/trpc/react';
-import { LocalForageKeys, Routes } from '@/utils/constants';
-import localforage from 'localforage';
+import { DEMO_USER } from '@/utils/auth/demo-user';
+import { Routes } from '@/utils/constants';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -12,22 +11,15 @@ export function useCreateBlankProject() {
     const { data: user } = api.user.get.useQuery();
     const { mutateAsync: createSandbox } = api.sandbox.create.useMutation();
     const { mutateAsync: createProject } = api.project.create.useMutation();
-    const { setIsAuthModalOpen } = useAuthContext();
     const router = useRouter();
     const [isCreatingProject, setIsCreatingProject] = useState(false);
 
     const handleStartBlankProject = async () => {
-        if (!user?.id) {
-            // Store the return URL and open auth modal
-            await localforage.setItem(LocalForageKeys.RETURN_URL, window.location.pathname);
-            setIsAuthModalOpen(true);
-            return;
-        }
-
+        const userId = user?.id ?? DEMO_USER.id;
         setIsCreatingProject(true);
         try {
             const { sandboxId, previewUrl } = await createSandbox({
-                title: `Blank project - ${user.id}`,
+                title: `Blank project - ${userId}`,
             });
 
             const newProject = await createProject({
@@ -38,7 +30,7 @@ export function useCreateBlankProject() {
                 },
                 sandboxId,
                 sandboxUrl: previewUrl,
-                userId: user.id,
+                userId,
             });
 
             if (newProject) {

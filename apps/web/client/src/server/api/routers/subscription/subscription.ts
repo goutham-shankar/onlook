@@ -1,5 +1,6 @@
 import { Routes } from '@/utils/constants';
-import { legacySubscriptions, prices, subscriptions, fromDbSubscription, users } from '@onlook/db';
+import { DEMO_USER } from '@/utils/auth/demo-user';
+import { legacySubscriptions, prices, subscriptions, fromDbSubscription, users, SEED_USER } from '@onlook/db';
 import { createBillingPortalSession, createCheckoutSession, createCustomer, isTierUpgrade, PriceKey, releaseSubscriptionSchedule, SubscriptionStatus, updateSubscription, updateSubscriptionNextPeriod } from '@onlook/stripe';
 import { and, eq, isNull } from 'drizzle-orm';
 import { headers } from 'next/headers';
@@ -9,12 +10,10 @@ import { createTRPCRouter, protectedProcedure, publicProcedure } from '../../trp
 export const subscriptionRouter = createTRPCRouter({
     getLegacySubscriptions: publicProcedure.query(async ({ ctx }) => {
         const user = ctx.user;
-        if (!user?.email) {
-            return null;
-        }
+        const email: string = user?.email ?? DEMO_USER.email ?? SEED_USER.EMAIL;
         const subscription = await ctx.db.query.legacySubscriptions.findFirst({
             where: and(
-                eq(legacySubscriptions.email, user.email),
+                eq(legacySubscriptions.email, email),
                 isNull(legacySubscriptions.redeemAt),
             ),
         });
@@ -22,12 +21,10 @@ export const subscriptionRouter = createTRPCRouter({
     }),
     get: publicProcedure.query(async ({ ctx }) => {
         const user = ctx.user;
-        if (!user?.id) {
-            return null;
-        }
+        const userId: string = user?.id ?? DEMO_USER.id;
         const subscription = await ctx.db.query.subscriptions.findFirst({
             where: and(
-                eq(subscriptions.userId, user.id),
+                eq(subscriptions.userId, userId),
                 eq(subscriptions.status, SubscriptionStatus.ACTIVE),
             ),
             with: {
@@ -37,7 +34,7 @@ export const subscriptionRouter = createTRPCRouter({
         });
 
         if (!subscription) {
-            console.log('No active subscription found for user', user.id);
+            console.log('No active subscription found for user', userId);
             return null;
         }
 
@@ -69,8 +66,9 @@ export const subscriptionRouter = createTRPCRouter({
     })).mutation(async ({ ctx, input }) => {
         const originUrl = (await headers()).get('origin');
         const user = ctx.user;
+        const userId: string = user?.id ?? DEMO_USER.id;
         const userData = await ctx.db.query.users.findFirst({
-            where: eq(users.id, user.id),
+            where: eq(users.id, userId),
         });
 
         if (!userData) {
@@ -90,16 +88,16 @@ export const subscriptionRouter = createTRPCRouter({
                 name: (userData.firstName
                     ? userData.firstName + ' ' + userData.lastName
                     : userData.displayName) || "",
-                email: user.email ?? userData.email,
+                email: user.email ?? userData.email ?? DEMO_USER.email ?? SEED_USER.EMAIL,
             });
 
-            await ctx.db.update(users).set({ stripeCustomerId: customer.id }).where(eq(users.id, user.id));
+            await ctx.db.update(users).set({ stripeCustomerId: customer.id }).where(eq(users.id, userId));
             stripeCustomerId = customer.id;
         }
 
         const session = await createCheckoutSession({
             priceId: input.priceId,
-            userId: user.id,
+            userId,
             stripeCustomerId,
             successUrl: `${originUrl}${Routes.CALLBACK_STRIPE_SUCCESS}`,
             cancelUrl: `${originUrl}${Routes.CALLBACK_STRIPE_CANCEL}`,
@@ -109,9 +107,10 @@ export const subscriptionRouter = createTRPCRouter({
     }),
     manageSubscription: protectedProcedure.mutation(async ({ ctx }) => {
         const user = ctx.user;
+        const userId: string = user?.id ?? DEMO_USER.id;
         const subscription = await ctx.db.query.subscriptions.findFirst({
             where: and(
-                eq(subscriptions.userId, user.id),
+                eq(subscriptions.userId, userId),
                 eq(subscriptions.status, SubscriptionStatus.ACTIVE),
             ),
         });

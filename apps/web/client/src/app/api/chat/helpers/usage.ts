@@ -1,7 +1,6 @@
 import { env } from '@/env';
 import { DEMO_USER } from '@/utils/auth/demo-user';
 import { createClient as createTRPCClient } from '@/trpc/request-server';
-import { createClient as createSupabaseClient } from '@/utils/supabase/request-server';
 import { UsageType, type Usage } from '@onlook/models';
 import { type NextRequest } from 'next/server';
 
@@ -20,10 +19,7 @@ export const checkMessageLimit = async (req: NextRequest): Promise<{
 }
 
 export const getSupabaseUser = async (request: NextRequest) => {
-    const isAuthBypassed = env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH;
-    const supabase = await createSupabaseClient(request);
-    const { data: { user } } = await supabase.auth.getUser();
-    return user ?? (isAuthBypassed ? DEMO_USER : null);
+    return DEMO_USER;
 }
 
 export const incrementUsage = async (req: NextRequest, traceId?: string): Promise<{
@@ -32,9 +28,6 @@ export const incrementUsage = async (req: NextRequest, traceId?: string): Promis
 } | null> => {
     try {
         const user = await getSupabaseUser(req);
-        if (!user) {
-            throw new Error('User not found');
-        }
         const { api } = await createTRPCClient(req);
         const incrementRes = await api.usage.increment({
             type: UsageType.MESSAGE,

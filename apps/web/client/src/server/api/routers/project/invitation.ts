@@ -2,6 +2,7 @@ import { env } from '@/env';
 import {
     authUsers,
     createDefaultUserCanvas,
+    SEED_USER,
     projectInvitationInsertSchema,
     projectInvitations,
     fromDbUser,
@@ -16,6 +17,7 @@ import { TRPCError } from '@trpc/server';
 import { addDays, isAfter } from 'date-fns';
 import { and, eq, ilike, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { DEMO_USER } from '@/utils/auth/demo-user';
 import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '../../trpc';
 
@@ -40,6 +42,7 @@ export const invitationRouter = createTRPCRouter({
                 code: 'NOT_FOUND',
                 message: 'Inviter not found',
             });
+            const userEmail = ctx.user.email ?? DEMO_USER.email;
         }
 
         return {
@@ -99,22 +102,11 @@ export const invitationRouter = createTRPCRouter({
             }),
         )
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user.id) {
-                throw new TRPCError({
-                    code: 'UNAUTHORIZED',
-                    message: 'You must be logged in to invite a user',
-                });
-            }
+            const inviterId = ctx.user.id ?? DEMO_USER.id;
+            const inviterEmail: string = ctx.user.email ?? DEMO_USER.email ?? SEED_USER.EMAIL;
             const inviter = await ctx.db.query.users.findFirst({
-                where: eq(users.id, ctx.user.id),
+                where: eq(users.id, inviterId),
             });
-
-            if (!inviter) {
-                throw new TRPCError({
-                    code: 'NOT_FOUND',
-                    message: 'Inviter not found',
-                });
-            }
 
             const [invitation] = await ctx.db
                 .transaction(async (tx) => {
@@ -144,12 +136,12 @@ export const invitationRouter = createTRPCRouter({
                                 ...input,
                                 role: input.role as ProjectRole,
                                 token: uuidv4(),
-                                inviterId: ctx.user.id,
+                                inviterId,
                                 expiresAt: addDays(new Date(), 7),
                             },
                         ])
                         .returning();
-                })
+                });
 
             if (invitation) {
                 if (!env.RESEND_API_KEY) {
@@ -166,8 +158,8 @@ export const invitationRouter = createTRPCRouter({
                     emailClient,
                     {
                         inviteeEmail: input.inviteeEmail,
-                        invitedByName: inviter.firstName ?? inviter.displayName ?? undefined,
-                        invitedByEmail: ctx.user.email,
+                        invitedByName: inviter?.firstName ?? inviter?.displayName ?? SEED_USER.DISPLAY_NAME,
+                        invitedByEmail: inviterEmail,
                         inviteLink: constructInvitationLink(
                             env.NEXT_PUBLIC_SITE_URL,
                             invitation.id,
@@ -192,12 +184,8 @@ export const invitationRouter = createTRPCRouter({
     accept: protectedProcedure
         .input(z.object({ token: z.string(), id: z.string() }))
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user.id) {
-                throw new TRPCError({
-                    code: 'UNAUTHORIZED',
-                    message: 'You must be logged in to accept an invitation',
-                });
-            }
+            const userId = ctx.user.id ?? DEMO_USER.id;
+            const userEmail = ctx.user.email ?? DEMO_USER.email;
 
             const invitation = await ctx.db.query.projectInvitations.findFirst({
                 where: and(
@@ -220,7 +208,7 @@ export const invitationRouter = createTRPCRouter({
                 });
             }
 
-            if (invitation.inviteeEmail !== ctx.user.email) {
+            if (invitation.inviteeEmail !== userEmail) {
                 throw new TRPCError({
                     code: 'BAD_REQUEST',
                     message: `This invitation was sent to ${invitation.inviteeEmail}. Please sign in with that email address.`,
@@ -247,24 +235,26 @@ export const invitationRouter = createTRPCRouter({
                     .insert(userProjects)
                     .values({
                         projectId: invitation.projectId,
-                        userId: ctx.user.id,
+                        userId,
                         role: invitation.role,
                     })
                     .onConflictDoNothing();
 
                 await tx
                     .insert(userCanvases)
-                    .values(createDefaultUserCanvas(ctx.user.id, invitation.project.canvas.id))
+                    .values(createDefaultUserCanvas(userId, invitation.project.canvas.id))
                     .onConflictDoNothing();
             });
         }),
     suggested: protectedProcedure
         .input(z.object({ projectId: z.string() }))
         .query(async ({ ctx, input }) => {
-            if (isFreeEmail(ctx.user.email)) {
+            const userEmail: string = ctx.user.email ?? DEMO_USER.email ?? SEED_USER.EMAIL;
+
+            if (isFreeEmail(userEmail)) {
                 return [];
             }
-            const domain = ctx.user.email.split('@').at(-1);
+            const domain = userEmail.split('@').at(-1);
 
             const suggestedUsers = await ctx.db
                 .select()

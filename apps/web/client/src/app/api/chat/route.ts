@@ -1,4 +1,5 @@
 import { api } from '@/trpc/server';
+import { DEMO_USER } from '@/utils/auth/demo-user';
 import { trackEvent } from '@/utils/analytics/server';
 import { createRootAgentStream } from '@onlook/ai';
 import { toDbMessage } from '@onlook/db';
@@ -9,16 +10,7 @@ import { checkMessageLimit, decrementUsage, errorHandler, getSupabaseUser, incre
 
 export async function POST(req: NextRequest) {
     try {
-        const user = await getSupabaseUser(req);
-        if (!user) {
-            return new Response(JSON.stringify({
-                error: 'Unauthorized, no user found. Please login again.',
-                code: 401
-            }), {
-                status: 401,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
+        const user = DEMO_USER;
         const usageCheckResult = await checkMessageLimit(req);
         if (usageCheckResult.exceeded) {
             trackEvent({
