@@ -221,6 +221,30 @@ export const projectRouter = createTRPCRouter({
             excludeProjectId: z.string().optional(),
         }).optional())
         .query(async ({ ctx, input }) => {
+            const isBypassDemoUser = (env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) && ctx.user.id === DEMO_USER.id;
+
+            if (isBypassDemoUser) {
+                const allProjects = await ctx.db.query.projects.findMany({
+                    where: input?.excludeProjectId
+                        ? ne(projects.id, input.excludeProjectId)
+                        : undefined,
+                    limit: input?.limit,
+                });
+
+                if (allProjects.length === 0) {
+                    await seedDemoProject(ctx.db);
+                    const seededProjects = await ctx.db.query.projects.findMany({
+                        where: input?.excludeProjectId
+                            ? ne(projects.id, input.excludeProjectId)
+                            : undefined,
+                        limit: input?.limit,
+                    });
+                    return seededProjects.map(fromDbProject).sort((a, b) => new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime());
+                }
+
+                return allProjects.map(fromDbProject).sort((a, b) => new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime());
+            }
+
             const fetchedUserProjects = await ctx.db.query.userProjects.findMany({
                 where: input?.excludeProjectId ? and(
                     eq(userProjects.userId, ctx.user.id),
@@ -231,23 +255,6 @@ export const projectRouter = createTRPCRouter({
                 },
                 limit: input?.limit,
             });
-
-            if (fetchedUserProjects.length === 0 && ctx.user.id === DEMO_USER.id) {
-                await seedDemoProject(ctx.db);
-
-                const seededUserProjects = await ctx.db.query.userProjects.findMany({
-                    where: input?.excludeProjectId ? and(
-                        eq(userProjects.userId, ctx.user.id),
-                        ne(userProjects.projectId, input.excludeProjectId),
-                    ) : eq(userProjects.userId, ctx.user.id),
-                    with: {
-                        project: true,
-                    },
-                    limit: input?.limit,
-                });
-
-                return seededUserProjects.map((userProject) => fromDbProject(userProject.project)).sort((a, b) => new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime());
-            }
 
             return fetchedUserProjects.map((userProject) => fromDbProject(userProject.project)).sort((a, b) => new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime());
         }),
