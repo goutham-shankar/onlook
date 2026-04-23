@@ -3,7 +3,6 @@
 import { useAuthContext } from '@/app/auth/auth-context';
 import { api } from '@/trpc/react';
 import { LocalForageKeys, Routes } from '@/utils/constants';
-import { SandboxTemplates, Templates } from '@onlook/constants';
 import localforage from 'localforage';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,7 +10,7 @@ import { toast } from 'sonner';
 
 export function useCreateBlankProject() {
     const { data: user } = api.user.get.useQuery();
-    const { mutateAsync: forkSandbox } = api.sandbox.fork.useMutation();
+    const { mutateAsync: createSandbox } = api.sandbox.create.useMutation();
     const { mutateAsync: createProject } = api.project.create.useMutation();
     const { setIsAuthModalOpen } = useAuthContext();
     const router = useRouter();
@@ -27,13 +26,8 @@ export function useCreateBlankProject() {
 
         setIsCreatingProject(true);
         try {
-            // Create a blank project using the BLANK template
-            const { sandboxId, previewUrl } = await forkSandbox({
-                sandbox: SandboxTemplates[Templates.EMPTY_NEXTJS],
-                config: {
-                    title: `Blank project - ${user.id}`,
-                    tags: ['blank', user.id],
-                },
+            const { sandboxId, previewUrl } = await createSandbox({
+                title: `Blank project - ${user.id}`,
             });
 
             const newProject = await createProject({
