@@ -10,7 +10,13 @@ const globalForDb = globalThis as unknown as {
     conn: postgres.Sql | undefined;
 };
 
-const conn = globalForDb.conn ?? postgres(process.env.SUPABASE_DATABASE_URL!, { prepare: false });
+const databaseUrl = process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL ?? process.env.DIRECT_URL;
+
+if (!databaseUrl) {
+    throw new Error('Missing database connection string. Set SUPABASE_DATABASE_URL, DATABASE_URL, or DIRECT_URL.');
+}
+
+const conn = globalForDb.conn ?? postgres(databaseUrl, { prepare: false });
 if (process.env.NODE_ENV !== 'production') globalForDb.conn = conn;
 
 export const db = drizzle(conn, { schema });
