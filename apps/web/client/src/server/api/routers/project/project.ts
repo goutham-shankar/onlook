@@ -85,6 +85,11 @@ export const projectRouter = createTRPCRouter({
     hasAccess: protectedProcedure
         .input(z.object({ projectId: z.string() }))
         .query(async ({ ctx, input }) => {
+            const isBypassDemoUser = (env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) && ctx.user.id === DEMO_USER.id;
+            if (isBypassDemoUser) {
+                return true;
+            }
+
             const user = ctx.user;
             const project = await ctx.db.query.projects.findFirst({
                 where: eq(projects.id, input.projectId),
@@ -261,6 +266,8 @@ export const projectRouter = createTRPCRouter({
     get: protectedProcedure
         .input(z.object({ projectId: z.string() }))
         .query(async ({ ctx, input }) => {
+            await verifyProjectAccess(ctx.db, ctx.user.id, input.projectId);
+
             const project = await ctx.db.query.projects.findFirst({
                 where: eq(projects.id, input.projectId),
             });
@@ -273,6 +280,8 @@ export const projectRouter = createTRPCRouter({
     getProjectWithCanvas: protectedProcedure
         .input(z.object({ projectId: z.string() }))
         .query(async ({ ctx, input }) => {
+            await verifyProjectAccess(ctx.db, ctx.user.id, input.projectId);
+
             const project = await ctx.db.query.projects.findFirst({
                 where: eq(projects.id, input.projectId),
                 with: {

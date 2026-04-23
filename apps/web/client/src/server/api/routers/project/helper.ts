@@ -1,3 +1,5 @@
+import { env } from '@/env';
+import { DEMO_USER } from '@/utils/auth/demo-user';
 import { eq } from "drizzle-orm";
 import { type Frame, projects, userProjects, type DrizzleDb } from "@onlook/db";
 
@@ -37,6 +39,11 @@ export async function verifyProjectAccess(
     userId: string,
     projectId: string,
 ): Promise<void> {
+    const isBypassDemoUser = (env.ONLOOK_DISABLE_AUTH || env.NEXT_PUBLIC_ONLOOK_DISABLE_AUTH) && userId === DEMO_USER.id;
+    if (isBypassDemoUser) {
+        return;
+    }
+
     const project = await db.query.projects.findFirst({
         where: eq(projects.id, projectId),
         with: {
