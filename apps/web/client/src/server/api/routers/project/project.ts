@@ -1,4 +1,5 @@
 import { env } from '@/env';
+import { DEMO_USER } from '@/utils/auth/demo-user';
 import { createTRPCRouter, protectedProcedure } from '@/server/api/trpc';
 import { trackEvent } from '@/utils/analytics/server';
 import FirecrawlApp from '@mendable/firecrawl-js';
@@ -8,10 +9,12 @@ import {
     branches,
     canvases,
     conversations,
+    createDefaultProject,
     createDefaultBranch,
     createDefaultCanvas,
     createDefaultConversation,
     createDefaultFrame,
+    createDefaultProjectSettings,
     createDefaultUserCanvas,
     DefaultFrameType,
     frames,
@@ -23,10 +26,12 @@ import {
     projectInsertSchema,
     projects,
     projectUpdateSchema,
+    projectSettings,
     toDbPreviewImg,
     userCanvases,
     userProjects,
     type Canvas,
+    type DrizzleDb,
     type UserCanvas
 } from '@onlook/db';
 import { compressImageServer } from '@onlook/image-server';
@@ -38,6 +43,43 @@ import { z } from 'zod';
 import { projectCreateRequestRouter } from './createRequest';
 import { fork } from './fork';
 import { extractCsbPort, verifyProjectAccess } from './helper';
+
+const seedDemoProject = async (db: DrizzleDb) => {
+    const project = createDefaultProject({});
+    const branch = createDefaultBranch({
+        projectId: project.id,
+        sandboxId: 'demo-sandbox',
+    });
+    const canvas = createDefaultCanvas(project.id);
+    const userCanvas = createDefaultUserCanvas(DEMO_USER.id, canvas.id, {
+        x: '120',
+        y: '120',
+        scale: '0.56',
+    });
+    const frame = createDefaultFrame({
+        canvasId: canvas.id,
+        branchId: branch.id,
+        url: 'http://localhost:3000',
+        type: DefaultFrameType.DESKTOP,
+    });
+    const conversation = createDefaultConversation(project.id);
+    const settings = createDefaultProjectSettings(project.id);
+
+    await db.transaction(async (tx) => {
+        await tx.insert(projects).values(project).onConflictDoNothing();
+        await tx.insert(branches).values(branch).onConflictDoNothing();
+        await tx.insert(userProjects).values({
+            userId: DEMO_USER.id,
+            projectId: project.id,
+            role: ProjectRole.OWNER,
+        }).onConflictDoNothing();
+        await tx.insert(canvases).values(canvas).onConflictDoNothing();
+        await tx.insert(userCanvases).values(userCanvas).onConflictDoNothing();
+        await tx.insert(frames).values(frame).onConflictDoNothing();
+        await tx.insert(conversations).values(conversation).onConflictDoNothing();
+        await tx.insert(projectSettings).values(settings).onConflictDoNothing();
+    });
+};
 
 export const projectRouter = createTRPCRouter({
     hasAccess: protectedProcedure
@@ -189,6 +231,24 @@ export const projectRouter = createTRPCRouter({
                 },
                 limit: input?.limit,
             });
+
+            if (fetchedUserProjects.length === 0 && ctx.user.id === DEMO_USER.id) {
+                await seedDemoProject(ctx.db);
+
+                const seededUserProjects = await ctx.db.query.userProjects.findMany({
+                    where: input?.excludeProjectId ? and(
+                        eq(userProjects.userId, ctx.user.id),
+                        ne(userProjects.projectId, input.excludeProjectId),
+                    ) : eq(userProjects.userId, ctx.user.id),
+                    with: {
+                        project: true,
+                    },
+                    limit: input?.limit,
+                });
+
+                return seededUserProjects.map((userProject) => fromDbProject(userProject.project)).sort((a, b) => new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime());
+            }
+
             return fetchedUserProjects.map((userProject) => fromDbProject(userProject.project)).sort((a, b) => new Date(b.metadata.updatedAt).getTime() - new Date(a.metadata.updatedAt).getTime());
         }),
     get: protectedProcedure
